@@ -1007,7 +1007,23 @@
   <!-- Toast Notification Container (Replaces browser alert()) -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
-  <script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+// ==================== SUPABASE CONNECTION ====================
+
+const SUPABASE_URL = "https://mjduxtrtygjlifllrgay.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_JMaQhN-DrhmSE2OdWBpA_CgatoVjH";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+console.log("Supabase connection initialized.");
+
     // ==================== DATA & CONSTANTS (100% Preserved Schema) ====================
     const labs = [
       "Chemistry Laboratory",
@@ -1046,22 +1062,35 @@
     ];
 
     let db = {
-      items: [],
-      transactions: [],
-      requisitions: [],
-      equipment: []
-    };
+  items: [],
+  transactions: [],
+  requisitions: [],
+  equipment: []
+};
 
     let currentPage = "dashboard";
     let pendingDeleteId = null;
 
     const $ = id => document.getElementById(id);
-    const save = () => localStorage.setItem("sherubtseInventoryDB", JSON.stringify(db));
-    const scope = () => $("labFilter").value;
-    const scoped = arr => arr.filter(x => scope() === "All" || x.lab === scope());
-    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    }[c]));
+
+// Temporary save function while we connect Supabase
+const save = () => {
+  console.log("Supabase connection will be added here.");
+};
+
+const scope = () => $("labFilter").value;
+
+const scoped = arr => arr.filter(
+  x => scope() === "All" || x.lab === scope()
+);
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+}[c]));
 
     // ==================== NON-BLOCKING TOAST & CONFIRMATION MODAL ====================
     function showToast(message, type = "success") {
