@@ -1421,12 +1421,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
       $("mLow").textContent = low.length;
       $("mOut").textContent = out.length;
 
-      const visibleLabs = currentUserProfile?.role === "technician"
-  ? [scope()]
-  : labs;
-
-$("labTiles").innerHTML = visibleLabs.map((l) => {
-  const i = labs.indexOf(l);
+     $("labTiles").innerHTML = labs.map((l, i) => {
         const rows = db.items.filter(x => x.lab === l);
         const totalQty = rows.reduce((s, x) => s + Number(x.qty), 0);
         const healthyCount = rows.filter(x => x.qty > x.reorder).length;
