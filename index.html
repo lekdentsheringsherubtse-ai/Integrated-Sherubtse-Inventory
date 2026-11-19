@@ -260,7 +260,7 @@
   </div>
 </div>
 <!-- ================= END LOGIN SCREEN ================= -->
- 
+
   <div class="flex min-h-screen">
     <!-- Refined Dark Forest Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-forest-950 via-forest-900 to-forest-950 text-forest-100 flex flex-col border-r border-forest-800/70 shadow-2xl lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out">
@@ -401,6 +401,33 @@
                 <option>Central Instrumental Facilities</option>
               </select>
             </div>
+
+<!-- USER PROFILE & LOGOUT -->
+<div id="userProfileArea" class="hidden items-center gap-3 pl-3 border-l border-slate-200">
+
+  <div class="w-9 h-9 rounded-full bg-forest-100 text-forest-800 flex items-center justify-center font-bold text-sm">
+    <span id="userInitials">U</span>
+  </div>
+
+  <div class="hidden sm:block min-w-0">
+    <p id="userDisplayName" class="text-xs font-bold text-slate-800 truncate">User</p>
+    <p id="userDisplayRole" class="text-[10px] text-slate-500 truncate">Laboratory User</p>
+  </div>
+
+  <button id="logoutButton" type="button" title="Sign out"
+    class="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all">
+
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+
+  </button>
+</div>
+<!-- END USER PROFILE -->
+
           </div>
 
         </div>
@@ -1838,6 +1865,141 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
 
     updateNavStyles("dashboard");
     render();
+
+// ================= SUPABASE LOGIN SYSTEM =================
+
+let currentUserProfile = null;
+
+function showLoginError(message) {
+  const errorBox = document.getElementById("loginError");
+  errorBox.textContent = message;
+  errorBox.classList.remove("hidden");
+}
+
+async function loadUserProfile() {
+  const { data, error } = await supabaseClient.auth.getUser();
+
+  if (error || !data.user) {
+    throw new Error("Please sign in to continue.");
+  }
+
+  const user = data.user;
+
+  const { data: profile, error: profileError } = await supabaseClient
+    .from("profiles")
+    .select("full_name, role, laboratory_id")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    await supabaseClient.auth.signOut();
+    throw new Error("User profile not found. Contact the Assistant Manager.");
+  }
+
+  currentUserProfile = profile;
+
+  const labFilter = document.getElementById("labFilter");
+
+  if (profile.role === "assistant_manager") {
+    labFilter.value = "All";
+    labFilter.disabled = false;
+  } else if (profile.role === "technician") {
+    const { data: laboratory, error: labError } = await supabaseClient
+      .from("laboratories")
+      .select("name")
+      .eq("id", profile.laboratory_id)
+      .single();
+
+    if (labError || !laboratory) {
+      await supabaseClient.auth.signOut();
+      throw new Error("Assigned laboratory not found.");
+    }
+
+    labFilter.value = laboratory.name;
+    labFilter.disabled = true;
+  } else {
+    await supabaseClient.auth.signOut();
+    throw new Error("Invalid account role.");
+  }
+
+  document.getElementById("loginScreen").classList.add("hidden");
+
+  const profileArea = document.getElementById("userProfileArea");
+  profileArea.classList.remove("hidden");
+  profileArea.classList.add("flex");
+
+  document.getElementById("userDisplayName").textContent =
+    profile.full_name || user.email;
+
+  document.getElementById("userDisplayRole").textContent =
+    profile.role === "assistant_manager"
+      ? "Assistant Manager"
+      : "Laboratory Technician";
+
+  document.getElementById("userInitials").textContent =
+    (profile.full_name || user.email).substring(0, 1).toUpperCase();
+
+  render();
+}
+
+// LOGIN FORM
+document.getElementById("loginForm").addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const loginButton = document.getElementById("loginButton");
+
+  document.getElementById("loginError").classList.add("hidden");
+  loginButton.disabled = true;
+  loginButton.textContent = "Signing in...";
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw new Error("Invalid email or password.");
+
+    await loadUserProfile();
+  } catch (error) {
+    showLoginError(error.message);
+  } finally {
+    loginButton.disabled = false;
+    loginButton.textContent = "Sign In Securely";
+  }
+});
+
+// SHOW / HIDE PASSWORD
+document.getElementById("toggleLoginPassword").addEventListener("click", function() {
+  const passwordInput = document.getElementById("loginPassword");
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+});
+
+// CHECK EXISTING LOGIN
+async function checkExistingLogin() {
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    showLoginError("Unable to verify your session. Please sign in again.");
+    return;
+  }
+
+  if (data.session) {
+    try {
+      await loadUserProfile();
+    } catch (error) {
+      showLoginError(error.message);
+    }
+  }
+}
+
+checkExistingLogin();
+
+// ================= END LOGIN SYSTEM =================
+
   </script>
 </body>
 </html>
