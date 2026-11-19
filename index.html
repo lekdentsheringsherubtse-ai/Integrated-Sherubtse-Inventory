@@ -2000,6 +2000,40 @@ checkExistingLogin();
 
 // ================= END LOGIN SYSTEM =================
 
+ // ================= LOGOUT SYSTEM =================
+
+document.getElementById("logoutButton").addEventListener("click", async function() {
+  const logoutButton = this;
+  logoutButton.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) throw error;
+
+    currentUserProfile = null;
+
+    const profileArea = document.getElementById("userProfileArea");
+    profileArea.classList.add("hidden");
+    profileArea.classList.remove("flex");
+
+    const labFilter = document.getElementById("labFilter");
+    labFilter.disabled = false;
+    labFilter.value = "All";
+
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("loginForm").reset();
+    document.getElementById("loginError").classList.add("hidden");
+
+  } catch (error) {
+    alert("Logout failed. Please try again.");
+  } finally {
+    logoutButton.disabled = false;
+  }
+});
+
+// ================= END LOGOUT SYSTEM =================
+
   </script>
 </body>
 </html>
