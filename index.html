@@ -1226,11 +1226,20 @@ const save = () => {
   console.log("Supabase connection will be added here.");
 };
 
+
 const scope = () => $("labFilter").value;
 
-const scoped = arr => arr.filter(
-  x => scope() === "All" || x.lab === scope()
-);
+const scoped = arr => {
+  if (currentUserProfile?.role === "technician") {
+    const assignedLab = $("labFilter").value;
+    return arr.filter(item => item.lab === assignedLab);
+  }
+
+  return arr.filter(
+    item => scope() === "All" || item.lab === scope()
+  );
+};
+
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
   "&": "&amp;",
