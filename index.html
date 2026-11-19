@@ -1045,8 +1045,8 @@
       { id: 7, lab: labs[3], name: "UV-Visible Spectrophotometer", category: "Instrument", qty: 1, unit: "unit", reorder: 0, location: "CIF Instrument Room", remarks: "Demo record" }
     ];
 
-    let db = JSON.parse(localStorage.getItem("sherubtseInventoryDB") || "null") || {
-      items: seed,
+    let db = {
+      items: [],
       transactions: [],
       requisitions: [],
       equipment: []
