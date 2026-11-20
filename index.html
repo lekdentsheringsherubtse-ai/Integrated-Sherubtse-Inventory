@@ -1793,12 +1793,11 @@ $("saveReq").onclick = async () => {
     return showToast("Please enter the requested item or particulars.", "error");
   }
 
-  const quantity = Number($("rQty").value);
+  const quantity = $("rQty").value.trim();
 
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return showToast("Please enter a valid quantity.", "error");
-  }
-
+if (!quantity) {
+  return showToast("Please enter the quantity.", "error");
+}
   const button = $("saveReq");
   button.disabled = true;
 
