@@ -1562,33 +1562,108 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
     $("cancelAdd").onclick = hideAddForm;
     $("cancelAddTop").onclick = hideAddForm;
 
-    $("saveItem").onclick = () => {
-      const name = $("fName").value.trim();
-      if (!name) return showToast("Please enter an item name.", "error");
-      const qty = Number($("fQty").value);
-      const reorder = Number($("fReorder").value);
-      if (qty < 0 || reorder < 0) return showToast("Quantity and reorder level cannot be negative.", "error");
+   
+$("saveItem").onclick = async () => {
+  const name = $("fName").value.trim();
 
-      db.items.push({
-        id: Date.now(),
-        lab: $("fLab").value,
-        name,
-        category: $("fCategory").value,
-        qty,
-        unit: $("fUnit").value.trim() || "unit",
-        reorder,
-        location: $("fLocation").value.trim(),
-        remarks: $("fRemarks").value.trim()
-      });
+  if (!name) {
+    return showToast("Please enter an item name.", "error");
+  }
 
-      save();
-      ["fName", "fUnit", "fLocation", "fRemarks"].forEach(id => $(id).value = "");
-      $("fQty").value = 0;
-      $("fReorder").value = 0;
-      hideAddForm();
-      render();
-      showToast(`"${name}" added to inventory.`, "success");
+  const qty = Number($("fQty").value);
+  const reorder = Number($("fReorder").value);
+
+  if (!Number.isFinite(qty) || !Number.isFinite(reorder) ||
+      qty < 0 || reorder < 0) {
+    return showToast("Enter valid non-negative quantities.", "error");
+  }
+
+  const saveButton = $("saveItem");
+  saveButton.disabled = true;
+  saveButton.textContent = "Saving...";
+
+  try {
+    let laboratoryId;
+
+    // Technicians must use their assigned laboratory.
+    if (currentUserProfile.role === "technician") {
+      laboratoryId = currentUserProfile.laboratory_id;
+    } else {
+      // Assistant Manager selects the laboratory.
+      const selectedLab = $("fLab").value;
+
+      const { data: laboratory, error: labError } =
+        await supabaseClient
+          .from("laboratories")
+          .select("id")
+          .eq("name", selectedLab)
+          .single();
+
+      if (labError || !laboratory) {
+        throw new Error("Selected laboratory was not found.");
+      }
+
+      laboratoryId = laboratory.id;
+    }
+
+    const itemData = {
+      laboratory_id: laboratoryId,
+      item_name: name,
+      category: $("fCategory").value,
+      opening_stock: qty,
+      current_stock: qty,
+      unit: $("fUnit").value.trim() || "unit",
+      reorder_level: reorder,
+      storage_location: $("fLocation").value.trim(),
+      description: $("fRemarks").value.trim()
     };
+
+    const { data: savedItem, error } = await supabaseClient
+      .from("inventory_items")
+      .insert(itemData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const { data: laboratory } = await supabaseClient
+      .from("laboratories")
+      .select("name")
+      .eq("id", laboratoryId)
+      .single();
+
+    db.items.push({
+      id: savedItem.id,
+      lab: laboratory?.name || "",
+      name: savedItem.item_name,
+      category: savedItem.category,
+      qty: Number(savedItem.current_stock || 0),
+      unit: savedItem.unit,
+      reorder: Number(savedItem.reorder_level || 0),
+      location: savedItem.storage_location || "",
+      remarks: savedItem.description || ""
+    });
+
+    ["fName", "fUnit", "fLocation", "fRemarks"]
+      .forEach(id => $(id).value = "");
+
+    $("fQty").value = 0;
+    $("fReorder").value = 0;
+
+    $("addForm").classList.add("hidden");
+
+    render();
+
+    showToast(`"${name}" saved successfully to Supabase.`, "success");
+
+  } catch (error) {
+    console.error("Add inventory error:", error);
+    showToast("Could not save item: " + error.message, "error");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = "Save Item";
+  }
+};
 
     // ==================== TRANSACTIONS ====================
     function fillTransactionItems() {
