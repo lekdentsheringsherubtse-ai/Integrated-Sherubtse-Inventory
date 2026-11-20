@@ -1411,91 +1411,75 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
     }
 
     
-function renderDashboard() {
-  const a = scoped(db.items);
-  const qty = a.reduce((s, x) => s + Number(x.qty), 0);
-  const low = a.filter(x => x.qty > 0 && x.qty <= x.reorder);
-  const out = a.filter(x => x.qty <= 0);
+ function renderDashboard() {
+      const a = scoped(db.items);
+      const qty = a.reduce((s, x) => s + Number(x.qty), 0);
+      const low = a.filter(x => x.qty > 0 && x.qty <= x.reorder);
+      const out = a.filter(x => x.qty <= 0);
 
-  $("mItems").textContent = a.length;
-  $("mQty").textContent = qty;
-  $("mLow").textContent = low.length;
-  $("mOut").textContent = out.length;
+      $("mItems").textContent = a.length;
+      $("mQty").textContent = qty;
+      $("mLow").textContent = low.length;
+      $("mOut").textContent = out.length;
 
-  // Show only the assigned laboratory for technicians
-  const visibleLabs = currentUserProfile?.role === "technician"
-    ? [scope()]
-    : labs;
+     $("labTiles").innerHTML = labs.map((l, i) => {
+        const rows = db.items.filter(x => x.lab === l);
+        const totalQty = rows.reduce((s, x) => s + Number(x.qty), 0);
+        const healthyCount = rows.filter(x => x.qty > x.reorder).length;
+        const healthPct = rows.length ? Math.round((healthyCount / rows.length) * 100) : 100;
+        const isSelected = scope() === l;
 
-  $("labTiles").innerHTML = visibleLabs.map(l => {
-    const i = labs.indexOf(l);
-    const rows = scoped(db.items).filter(x => x.lab === l);
-    const totalQty = rows.reduce((s, x) => s + Number(x.qty), 0);
-    const healthyCount = rows.filter(x => x.qty > x.reorder).length;
-    const healthPct = rows.length
-      ? Math.round((healthyCount / rows.length) * 100)
-      : 100;
-    const isSelected = scope() === l;
+        return `
+          <div class="lab-tile group relative p-5 rounded-2xl border ${isSelected ? 'border-forest-600 bg-forest-50/40 ring-2 ring-forest-600/15' : 'border-slate-200/90 bg-gradient-to-br from-white to-slate-50/70'} hover:border-forest-500 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" data-lab="${esc(l)}">
+            <div class="flex items-start justify-between gap-3">
+              <div class="w-10 h-10 rounded-xl bg-forest-900 text-emerald-300 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                ${labSvgs[i]}
+              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-semibold text-forest-700 group-hover:translate-x-0.5 transition-transform">
+                <span>Inspect</span>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
 
-    return `
-      <div class="lab-tile group relative p-5 rounded-2xl border ${isSelected ? 'border-forest-600 bg-forest-50/40 ring-2 ring-forest-600/15' : 'border-slate-200/90 bg-gradient-to-br from-white to-slate-50/70'} hover:border-forest-500 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" data-lab="${esc(l)}">
-        <div class="flex items-start justify-between gap-3">
-          <div class="w-10 h-10 rounded-xl bg-forest-900 text-emerald-300 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-            ${labSvgs[i]}
+            <h4 class="font-display font-bold text-slate-900 text-base mt-3.5 group-hover:text-forest-800 transition-colors">${esc(l)}</h4>
+            <p class="text-xs text-slate-500 mt-1 line-clamp-1">${esc(descriptions[i])}</p>
+
+            <!-- Stock Health Progress Bar -->
+            <div class="mt-4 pt-3.5 border-t border-slate-200/70">
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="text-slate-600"><strong class="font-mono text-slate-900">${rows.length}</strong> types &middot; <strong class="font-mono text-slate-900">${totalQty}</strong> units</span>
+                <span class="font-mono text-[11px] font-semibold ${healthPct >= 80 ? 'text-emerald-700' : healthPct >= 50 ? 'text-amber-700' : 'text-rose-700'}">${healthPct}% healthy</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500 ${healthPct >= 80 ? 'bg-emerald-500' : healthPct >= 50 ? 'bg-amber-500' : 'bg-rose-500'}" style="width: ${healthPct}%"></div>
+              </div>
+            </div>
           </div>
-          <span class="inline-flex items-center gap-1 text-xs font-semibold text-forest-700 group-hover:translate-x-0.5 transition-transform">
-            <span>Inspect</span>
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </span>
-        </div>
+        `;
+      }).join("");
 
-        <h4 class="font-display font-bold text-slate-900 text-base mt-3.5 group-hover:text-forest-800 transition-colors">${esc(l)}</h4>
-        <p class="text-xs text-slate-500 mt-1 line-clamp-1">${esc(descriptions[i])}</p>
+      document.querySelectorAll(".lab-tile").forEach(t => {
+        t.onclick = () => {
+          $("labFilter").value = t.dataset.lab;
+          $("labFilter").dispatchEvent(new Event("change"));
+          setPage("inventory");
+        };
+      });
 
-        <div class="mt-4 pt-3.5 border-t border-slate-200/70">
-          <div class="flex items-center justify-between text-xs mb-1.5">
-            <span class="text-slate-600"><strong class="font-mono text-slate-900">${rows.length}</strong> types &middot; <strong class="font-mono text-slate-900">${totalQty}</strong> units</span>
-            <span class="font-mono text-[11px] font-semibold ${healthPct >= 80 ? 'text-emerald-700' : healthPct >= 50 ? 'text-amber-700' : 'text-rose-700'}">${healthPct}% healthy</span>
-          </div>
-          <div class="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-500 ${healthPct >= 80 ? 'bg-emerald-500' : healthPct >= 50 ? 'bg-amber-500' : 'bg-rose-500'}" style="width: ${healthPct}%"></div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  // Prevent technicians from switching laboratory through dashboard tiles
-  document.querySelectorAll(".lab-tile").forEach(t => {
-    t.onclick = () => {
-      if (
-        currentUserProfile?.role === "technician" &&
-        t.dataset.lab !== scope()
-      ) {
-        return;
-      }
-
-      $("labFilter").value = t.dataset.lab;
-      $("labFilter").dispatchEvent(new Event("change"));
-      setPage("inventory");
-    };
-  });
-
-  const attention = a.filter(x => x.qty <= x.reorder);
-
-  $("attentionRows").innerHTML = attention.length
-    ? attention.map(x => `
-      <tr class="hover:bg-slate-50/90 transition-colors">
-        <td class="py-3.5 px-5 font-semibold text-slate-900">${esc(x.name)}</td>
-        <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.lab)}</td>
-        <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">${esc(x.category)}</span></td>
-        <td class="py-3.5 px-4 font-mono font-semibold text-slate-900 tabular-nums">${x.qty} <span class="font-sans font-normal text-xs text-slate-500">${esc(x.unit)}</span></td>
-        <td class="py-3.5 px-4 font-mono text-slate-600 tabular-nums">${x.reorder}</td>
-        <td class="py-3.5 px-5">${statusBadge(x)}</td>
-      </tr>
-    `).join("")
-    : `<tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">All inventory items in this laboratory scope are adequately stocked.</td></tr>`;
-}
+      const attention = a.filter(x => x.qty <= x.reorder);
+      $("attentionRows").innerHTML = attention.length
+        ? attention.map(x => `
+          <tr class="hover:bg-slate-50/90 transition-colors">
+            <td class="py-3.5 px-5 font-semibold text-slate-900">${esc(x.name)}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.lab)}</td>
+            <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">${esc(x.category)}</span></td>
+            <td class="py-3.5 px-4 font-mono font-semibold text-slate-900 tabular-nums">${x.qty} <span class="font-sans font-normal text-xs text-slate-500">${esc(x.unit)}</span></td>
+            <td class="py-3.5 px-4 font-mono text-slate-600 tabular-nums">${x.reorder}</td>
+            <td class="py-3.5 px-5">${statusBadge(x)}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">All inventory items in this laboratory scope are adequately stocked.</td></tr>`;
+    }
 
 
     function renderInventory() {
