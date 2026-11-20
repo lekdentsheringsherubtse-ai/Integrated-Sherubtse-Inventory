@@ -1784,24 +1784,76 @@ $("saveTransaction").onclick = async () => {
     }
 
     // ==================== REQUISITIONS (With Inline Status Update) ====================
-    $("saveReq").onclick = () => {
-      const item = $("rItem").value.trim();
-      if (!item) return showToast("Please enter the requested item or particulars.", "error");
-      db.requisitions.unshift({
-        date: $("rDate").value || new Date().toISOString().slice(0, 10),
-        lab: $("rLab").value,
-        item,
-        qty: $("rQty").value,
-        type: $("rType").value,
-        by: $("rBy").value,
+    
+$("saveReq").onclick = async () => {
+  const item = $("rItem").value.trim();
+
+  if (!item) {
+    return showToast("Please enter the requested item or particulars.", "error");
+  }
+
+  const quantity = Number($("rQty").value);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return showToast("Please enter a valid quantity.", "error");
+  }
+
+  const selectedLab = $("rLab").value;
+
+  // Identify the laboratory ID using the existing laboratory list
+  const labEntry = Object.entries(
+    Object.fromEntries(
+      (await supabaseClient.from("laboratories").select("id, name")).data?.map(
+        lab => [lab.name, lab.id]
+      ) || []
+    )
+  ).find(([name]) => name === selectedLab);
+
+  const labId = currentProfile.role === "assistant_manager"
+    ? Number(labEntry?.[1])
+    : currentProfile.laboratory_id;
+
+  if (!labId) {
+    return showToast("Unable to identify the laboratory.", "error");
+  }
+
+  const button = $("saveReq");
+  button.disabled = true;
+
+  try {
+    const { error } = await supabaseClient
+      .from("requisitions")
+      .insert([{
+        laboratory_id: labId,
+        request_date: $("rDate").value || new Date().toISOString().slice(0, 10),
+        item_name: item,
+        quantity: quantity,
+        unit: $("rUnit") ? $("rUnit").value : "",
+        request_type: $("rType").value,
+        requested_by: $("rBy").value.trim(),
         status: $("rStatus").value,
-        remarks: $("rRemarks").value
-      });
-      save();
-      ["rItem", "rQty", "rBy", "rRemarks"].forEach(id => $(id).value = "");
-      render();
-      showToast("Requisition record saved.", "success");
-    };
+        remarks: $("rRemarks").value.trim()
+      }]);
+
+    if (error) throw error;
+
+    await loadSupabaseData();
+
+    ["rItem", "rQty", "rBy", "rRemarks"].forEach(
+      id => $(id).value = ""
+    );
+
+    render();
+    showToast("Requisition saved successfully.", "success");
+
+  } catch (error) {
+    console.error("Requisition error:", error);
+    showToast("Unable to save requisition: " + error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+};
+
 
     function updateReqStatus(globalIndex, newStatus) {
       if (db.requisitions[globalIndex]) {
