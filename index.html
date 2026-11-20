@@ -1525,41 +1525,12 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
 
     // Inline Quick Stock Adjustment (+1 / -1) with automatic transaction log
   
-async function quickAdjust(id, delta) {
-  const item = db.items.find(x => x.id === id);
-  if (!item) return;
-
-  const type = delta > 0 ? "Stock In" : "Stock Out";
-
-  try {
-    const { data, error } = await supabaseClient.rpc(
-      "record_stock_transaction",
-      {
-        p_item_id: item.id,
-        p_type: type,
-        p_quantity: Math.abs(delta),
-        p_transaction_date: new Date().toISOString(),
-        p_reference_number: "Quick Register Adjustment",
-        p_remarks: ""
+function quickAdjust(id, delta) {
+      const item = db.items.find(x => x.id === id);
+      if (!item) return;
+      if (delta < 0 && item.qty <= 0) {
+        return showToast(`Cannot issue ${item.name}: stock is already 0.`, "error");
       }
-    );
-
-    if (error) throw error;
-
-    await loadSupabaseData();
-    render();
-
-    showToast(
-      `${type} successful. New balance: ${data} ${item.unit}.`,
-      "success"
-    );
-
-  } catch (error) {
-    console.error("Quick stock adjustment error:", error);
-    showToast("Stock adjustment failed: " + error.message, "error");
-  }
-}
-
       item.qty += delta;
       db.transactions.unshift({
         date: new Date().toISOString().slice(0, 10),
@@ -1708,71 +1679,15 @@ $("saveItem").onclick = async () => {
     $("tLab").onchange = fillTransactionItems;
 
  
-$("saveTransaction").onclick = async () => {
-  const item = db.items.find(
-    x => x.id === Number($("tItem").value)
-  );
-
-  const q = Number($("tQty").value);
-  const type = $("tType").value;
-
-  if (!item) {
-    return showToast("Please register an inventory item first.", "error");
-  }
-
-  if (!Number.isFinite(q) || q <= 0) {
-    return showToast("Enter a valid positive quantity.", "error");
-  }
-
-  if (!Number.isInteger(q)) {
-    return showToast("Please enter a whole number quantity.", "error");
-  }
-
-  const saveButton = $("saveTransaction");
-  saveButton.disabled = true;
-  saveButton.textContent = "Saving...";
-
-  try {
-    const selectedDate = $("tDate").value
-      ? new Date($("tDate").value + "T12:00:00").toISOString()
-      : new Date().toISOString();
-
-    const { data, error } = await supabaseClient.rpc(
-      "record_stock_transaction",
-      {
-        p_item_id: item.id,
-        p_type: type,
-        p_quantity: q,
-        p_transaction_date: selectedDate,
-        p_reference_number: $("tRef").value.trim(),
-        p_remarks: $("tRemarks").value.trim()
+$("saveTransaction").onclick = () => {
+      const item = db.items.find(x => x.id === Number($("tItem").value));
+      const q = Number($("tQty").value);
+      if (!item) return showToast("Please register an inventory item first.", "error");
+      if (!Number.isInteger(q) || q <= 0) return showToast("Enter a valid positive quantity.", "error");
+      const type = $("tType").value;
+      if (type === "Stock Out" && q > item.qty) {
+        return showToast(`Insufficient stock for ${item.name}. Available: ${item.qty} ${item.unit}.`, "error");
       }
-    );
-
-    if (error) throw error;
-
-    await loadSupabaseData();
-
-    $("tQty").value = 1;
-    $("tRef").value = "";
-    $("tRemarks").value = "";
-
-    render();
-
-    showToast(
-      `${type} recorded successfully. New balance: ${data} ${item.unit}.`,
-      "success"
-    );
-
-  } catch (error) {
-    console.error("Transaction error:", error);
-    showToast("Transaction failed: " + error.message, "error");
-  } finally {
-    saveButton.disabled = false;
-    saveButton.textContent = "Record Transaction";
-  }
-};
-
       item.qty += type === "Stock In" ? q : -q;
       db.transactions.unshift({
         date: $("tDate").value || new Date().toISOString().slice(0, 10),
