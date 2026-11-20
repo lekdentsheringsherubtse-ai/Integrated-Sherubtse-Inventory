@@ -1873,6 +1873,114 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
 
 let currentUserProfile = null;
 
+async function loadSupabaseData() {
+  try {
+    // Load laboratory names and IDs
+    const { data: laboratories, error: labError } =
+      await supabaseClient
+        .from("laboratories")
+        .select("id, name");
+
+    if (labError) throw labError;
+
+    const labNames = {};
+    laboratories.forEach(lab => {
+      labNames[lab.id] = lab.name;
+    });
+
+    // Load inventory
+    const { data: items, error: itemError } =
+      await supabaseClient
+        .from("inventory_items")
+        .select("*");
+
+    if (itemError) throw itemError;
+
+    db.items = items.map(x => ({
+      id: x.id,
+      lab: labNames[x.laboratory_id] || "",
+      name: x.item_name,
+      category: x.category,
+      qty: Number(x.current_stock || 0),
+      unit: x.unit,
+      reorder: Number(x.reorder_level || 0),
+      location: x.storage_location || "",
+      remarks: x.description || ""
+    }));
+
+    // Load stock transactions
+    const { data: transactions, error: transactionError } =
+      await supabaseClient
+        .from("stock_transactions")
+        .select("*, inventory_items(item_name)")
+        .order("transaction_date", { ascending: false });
+
+    if (transactionError) throw transactionError;
+
+    db.transactions = transactions.map(x => ({
+      id: x.id,
+      date: x.transaction_date
+        ? x.transaction_date.slice(0, 10)
+        : "",
+      lab: labNames[x.laboratory_id] || "",
+      item: x.inventory_items?.item_name || "",
+      type: x.transaction_type,
+      qty: Number(x.quantity || 0),
+      ref: x.reference_number || "",
+      remarks: x.remarks || ""
+    }));
+
+    // Load requisitions
+    const { data: requisitions, error: requisitionError } =
+      await supabaseClient
+        .from("requisitions")
+        .select("*")
+        .order("request_date", { ascending: false });
+
+    if (requisitionError) throw requisitionError;
+
+    db.requisitions = requisitions.map(x => ({
+      id: x.id,
+      date: x.request_date || "",
+      lab: labNames[x.laboratory_id] || "",
+      item: x.item_name,
+      qty: x.quantity,
+      type: x.request_type || "",
+      by: x.requested_by || "",
+      status: x.status || "Submitted",
+      remarks: x.remarks || ""
+    }));
+
+    // Load equipment
+    const { data: equipment, error: equipmentError } =
+      await supabaseClient
+        .from("equipment")
+        .select("*");
+
+    if (equipmentError) throw equipmentError;
+
+    db.equipment = equipment.map(x => ({
+      id: x.id,
+      lab: labNames[x.laboratory_id] || "",
+      name: x.equipment_name,
+      asset: x.asset_number || "",
+      condition: x.condition || "Good",
+      location: x.location || "",
+      service: x.last_service_date || "",
+      next: x.next_service_date || "",
+      remarks: x.remarks || ""
+    }));
+
+    console.log("Supabase records loaded successfully.");
+
+  } catch (error) {
+    console.error("Supabase loading error:", error);
+    throw new Error(
+      "Unable to load laboratory records: " + error.message
+    );
+  }
+}
+
 function showLoginError(message) {
   const errorBox = document.getElementById("loginError");
   errorBox.textContent = message;
@@ -1939,9 +2047,10 @@ async function loadUserProfile() {
       ? "Assistant Manager"
       : "Laboratory Technician";
 
-  document.getElementById("userInitials").textContent =
+    document.getElementById("userInitials").textContent =
     (profile.full_name || user.email).substring(0, 1).toUpperCase();
 
+  await loadSupabaseData();
   render();
 }
 
