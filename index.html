@@ -1913,25 +1913,89 @@ if (!quantity) {
     $("cancelEquipment").onclick = hideEquipmentForm;
     $("cancelEquipmentTop").onclick = hideEquipmentForm;
 
-    $("saveEquipment").onclick = () => {
-      const name = $("eName").value.trim();
-      if (!name) return showToast("Please enter equipment name.", "error");
-      db.equipment.unshift({
-        lab: $("eLab").value,
-        name,
-        asset: $("eAsset").value,
+$("saveEquipment").onclick = async () => {
+  const name = $("eName").value.trim();
+
+  if (!name) {
+    return showToast("Please enter equipment name.", "error");
+  }
+
+  const button = $("saveEquipment");
+  button.disabled = true;
+  button.textContent = "Saving...";
+
+  try {
+    let labId;
+
+    // Identify the technician's assigned laboratory
+    if (currentUserProfile.role === "technician") {
+      labId = currentUserProfile.laboratory_id;
+    }
+
+    // Identify the laboratory selected by Assistant Manager
+    else if (currentUserProfile.role === "assistant_manager") {
+      const { data: laboratory, error: labError } =
+        await supabaseClient
+          .from("laboratories")
+          .select("id")
+          .eq("name", $("eLab").value)
+          .single();
+
+      if (labError) throw labError;
+      labId = laboratory.id;
+    }
+
+    if (!labId) {
+      throw new Error("Unable to identify laboratory.");
+    }
+
+    // Save equipment directly to Supabase
+    const { error } = await supabaseClient
+      .from("equipment")
+      .insert([{
+        laboratory_id: labId,
+        equipment_name: name,
+        asset_number: $("eAsset").value.trim(),
         condition: $("eCondition").value,
-        location: $("eLocation").value,
-        service: $("eService").value,
-        next: $("eNext").value,
-        remarks: $("eRemarks").value
-      });
-      save();
-      hideEquipmentForm();
-      ["eName", "eAsset", "eLocation", "eService", "eNext", "eRemarks"].forEach(id => $(id).value = "");
-      render();
-      showToast(`Equipment "${name}" registered.`, "success");
-    };
+        location: $("eLocation").value.trim(),
+        last_service_date: $("eService").value || null,
+        next_service_date: $("eNext").value || null,
+        remarks: $("eRemarks").value.trim()
+      }]);
+
+    if (error) throw error;
+
+    // Reload records from Supabase
+    await loadSupabaseData();
+
+    hideEquipmentForm();
+
+    [
+      "eName",
+      "eAsset",
+      "eLocation",
+      "eService",
+      "eNext",
+      "eRemarks"
+    ].forEach(id => $(id).value = "");
+
+    render();
+
+    showToast(
+      `Equipment "${name}" registered successfully.`,
+      "success"
+    );
+
+  } catch (error) {
+    console.error("Equipment saving error:", error);
+    showToast("Unable to save equipment: " + error.message, "error");
+
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save Equipment";
+  }
+};
+
 
     function updateEquipmentCondition(globalIndex, newCond) {
       if (db.equipment[globalIndex]) {
