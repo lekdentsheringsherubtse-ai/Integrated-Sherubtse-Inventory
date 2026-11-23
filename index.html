@@ -1933,6 +1933,7 @@ async function updateReqStatus(globalIndex, newStatus) {
 }
 
 
+
 function renderRequisitions() {
   const indexed = db.requisitions
     .map((x, idx) => ({ ...x, _idx: idx }))
@@ -1946,7 +1947,6 @@ function renderRequisitions() {
   ];
 
   const isManager =
-    currentUserProfile &&
     currentUserProfile.role === "assistant_manager";
 
   $("reqRows").innerHTML = indexed.length
