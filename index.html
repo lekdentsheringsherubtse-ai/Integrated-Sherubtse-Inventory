@@ -1379,7 +1379,8 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({
     });
 
     // ==================== RENDER FUNCTIONS ====================
-    function render() {
+  let currentUserProfile = null;
+  function render() {
       $("scopeLabelText").textContent = scope() === "All" ? "All Laboratories" : scope();
       renderDashboard();
       renderInventory();
@@ -2228,8 +2229,6 @@ async function updateEquipmentCondition(globalIndex, newCond) {
     render();
 
 // ================= SUPABASE LOGIN SYSTEM =================
-
-let currentUserProfile = null;
 
 async function loadSupabaseData() {
   try {
