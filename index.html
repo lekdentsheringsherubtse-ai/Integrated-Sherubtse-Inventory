@@ -1997,14 +1997,33 @@ $("saveEquipment").onclick = async () => {
 };
 
 
-    function updateEquipmentCondition(globalIndex, newCond) {
-      if (db.equipment[globalIndex]) {
-        db.equipment[globalIndex].condition = newCond;
-        save();
-        renderEquipment();
-        showToast(`Equipment condition updated to "${newCond}".`, "info");
-      }
-    }
+  
+async function updateEquipmentCondition(globalIndex, newCond) {
+  const item = db.equipment[globalIndex];
+
+  if (!item) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from("equipment")
+      .update({ condition: newCond })
+      .eq("id", item.id);
+
+    if (error) throw error;
+
+    await loadSupabaseData();
+    render();
+
+    showToast(
+      `Equipment condition updated to "${newCond}".`,
+      "success"
+    );
+
+  } catch (error) {
+    console.error("Condition update error:", error);
+    showToast("Unable to update condition: " + error.message, "error");
+  }
+}
 
     function renderEquipment() {
       const indexed = db.equipment
