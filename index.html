@@ -1788,6 +1788,7 @@ $("saveTransaction").onclick = async () => {
     // ==================== REQUISITIONS (With Inline Status Update) ====================
 
   
+
 $("saveReq").onclick = async () => {
   const item = $("rItem").value.trim();
 
@@ -1797,9 +1798,10 @@ $("saveReq").onclick = async () => {
 
   const quantity = $("rQty").value.trim();
 
-if (!quantity) {
-  return showToast("Please enter the quantity.", "error");
-}
+  if (!quantity) {
+    return showToast("Please enter the quantity.", "error");
+  }
+
   const button = $("saveReq");
   button.disabled = true;
 
@@ -1834,7 +1836,7 @@ if (!quantity) {
         unit: "",
         request_type: $("rType").value,
         requested_by: $("rBy").value.trim(),
-        status: $("rStatus").value,
+        status: "Pending",
         remarks: $("rRemarks").value.trim()
       }]);
 
@@ -1863,7 +1865,8 @@ async function updateReqStatus(globalIndex, newStatus) {
 
   if (!req) return;
 
-  if (currentUserProfile.role !== "assistant_manager") {
+  if (!currentUserProfile ||
+      currentUserProfile.role !== "assistant_manager") {
     return showToast(
       "Only the Assistant Manager can update requisition status.",
       "error"
@@ -1881,24 +1884,23 @@ async function updateReqStatus(globalIndex, newStatus) {
     return showToast("Invalid requisition status.", "error");
   }
 
+  let approvalRemarks = "";
+
+  if (newStatus === "Approved" || newStatus === "Rejected") {
+    approvalRemarks = prompt(
+      `Enter remarks for this ${newStatus.toLowerCase()} decision:`
+    );
+
+    if (approvalRemarks === null) return;
+  }
+
   try {
-let approvalRemarks = "";
-
-if (newStatus === "Approved" || newStatus === "Rejected") {
-  approvalRemarks = prompt(
-    `Enter remarks for this ${newStatus.toLowerCase()} decision:`
-  );
-
-  if (approvalRemarks === null) return;
-}
-
-const updateData = {
-  status: newStatus,
-  approval_remarks: approvalRemarks
-};
+    const updateData = {
+      status: newStatus,
+      approval_remarks: approvalRemarks
+    };
 
     if (newStatus === "Approved" || newStatus === "Rejected") {
-      updateData.approved_by = currentUserProfile.id;
       updateData.approved_at = new Date().toISOString();
     }
 
@@ -1944,6 +1946,7 @@ function renderRequisitions() {
   ];
 
   const isManager =
+    currentUserProfile &&
     currentUserProfile.role === "assistant_manager";
 
   $("reqRows").innerHTML = indexed.length
