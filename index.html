@@ -1856,16 +1856,66 @@ if (!quantity) {
 };
 
 
+async function updateReqStatus(globalIndex, newStatus) {
+  const req = db.requisitions[globalIndex];
 
-    function updateReqStatus(globalIndex, newStatus) {
-      if (db.requisitions[globalIndex]) {
-        db.requisitions[globalIndex].status = newStatus;
-        save();
-        updateSidebarBadges();
-        renderReport();
-        showToast(`Requisition status updated to "${newStatus}".`, "info");
-      }
+  if (!req) return;
+
+  if (currentUserProfile.role !== "assistant_manager") {
+    return showToast(
+      "Only the Assistant Manager can update requisition status.",
+      "error"
+    );
+  }
+
+  const allowedStatuses = [
+    "Under Review",
+    "Approved",
+    "Rejected",
+    "Purchased"
+  ];
+
+  if (!allowedStatuses.includes(newStatus)) {
+    return showToast("Invalid requisition status.", "error");
+  }
+
+  try {
+    const updateData = {
+      status: newStatus
+    };
+
+    if (newStatus === "Approved" || newStatus === "Rejected") {
+      updateData.approved_by = currentUserProfile.id;
+      updateData.approved_at = new Date().toISOString();
     }
+
+    if (newStatus === "Purchased") {
+      updateData.completed_at = new Date().toISOString();
+    }
+
+    const { error } = await supabaseClient
+      .from("requisitions")
+      .update(updateData)
+      .eq("id", req.id);
+
+    if (error) throw error;
+
+    await loadSupabaseData();
+    render();
+
+    showToast(
+      `Requisition status updated to "${newStatus}".`,
+      "success"
+    );
+
+  } catch (error) {
+    console.error("Requisition update error:", error);
+    showToast(
+      "Unable to update requisition: " + error.message,
+      "error"
+    );
+  }
+}
 
     function renderRequisitions() {
       // Map with original index in db.requisitions so inline updates work even when lab-filtered
