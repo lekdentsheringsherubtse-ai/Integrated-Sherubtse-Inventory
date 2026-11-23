@@ -553,6 +553,7 @@
                     <th class="py-3.5 px-4">Available</th>
                     <th class="py-3.5 px-4">Reorder Level</th>
                     <th class="py-3.5 px-5">Status</th>
+                    <th class="py-3.5 px-4">Approval Remarks</th>
                   </tr>
                 </thead>
                 <tbody id="attentionRows" class="divide-y divide-slate-100 text-sm"></tbody>
@@ -1928,42 +1929,71 @@ const updateData = {
   }
 }
 
-    function renderRequisitions() {
-      // Map with original index in db.requisitions so inline updates work even when lab-filtered
-      const indexed = db.requisitions
-        .map((x, idx) => ({ ...x, _idx: idx }))
-        .filter(x => scope() === "All" || x.lab === scope());
 
-      const statuses = ["Submitted", "Under Review", "Approved", "Purchased", "Rejected"];
+function renderRequisitions() {
+  const indexed = db.requisitions
+    .map((x, idx) => ({ ...x, _idx: idx }))
+    .filter(x => scope() === "All" || x.lab === scope());
 
-      $("reqRows").innerHTML = indexed.length
-        ? indexed.map(x => {
-          const badgeColor = {
-            "Submitted": "bg-slate-100 text-slate-700 border-slate-200",
-            "Under Review": "bg-amber-50 text-amber-800 border-amber-200",
-            "Approved": "bg-emerald-50 text-emerald-700 border-emerald-200",
-            "Purchased": "bg-sky-50 text-sky-700 border-sky-200",
-            "Rejected": "bg-rose-50 text-rose-700 border-rose-200"
-          }[x.status] || "bg-slate-100 text-slate-700 border-slate-200";
+  const statuses = [
+    "Under Review",
+    "Approved",
+    "Rejected",
+    "Purchased"
+  ];
 
-          return `
-            <tr class="hover:bg-slate-50/90 transition-colors">
-              <td class="py-3.5 px-5 font-mono text-xs text-slate-600">${esc(x.date)}</td>
-              <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.lab)}</td>
-              <td class="py-3.5 px-4 font-semibold text-slate-900">${esc(x.item)}</td>
-              <td class="py-3.5 px-4 font-mono text-xs text-slate-700">${esc(x.qty || "—")}</td>
-              <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.type)}</td>
-              <td class="py-3.5 px-4 text-xs text-slate-700">${esc(x.by || "—")}</td>
-              <td class="py-3.5 px-5">
-                <select onchange="updateReqStatus(${x._idx}, this.value)" aria-label="Requisition Status" class="custom-select text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${badgeColor} focus:outline-none cursor-pointer">
-                  ${statuses.map(st => `<option value="${st}" ${x.status === st ? "selected" : ""}>${st}</option>`).join("")}
-                </select>
-              </td>
-            </tr>
+  const isManager =
+    currentUserProfile.role === "assistant_manager";
+
+  $("reqRows").innerHTML = indexed.length
+    ? indexed.map(x => {
+        const badgeColor = {
+          "Pending": "bg-slate-100 text-slate-700 border-slate-200",
+          "Submitted": "bg-slate-100 text-slate-700 border-slate-200",
+          "Under Review": "bg-amber-50 text-amber-800 border-amber-200",
+          "Approved": "bg-emerald-50 text-emerald-700 border-emerald-200",
+          "Purchased": "bg-sky-50 text-sky-700 border-sky-200",
+          "Rejected": "bg-rose-50 text-rose-700 border-rose-200"
+        }[x.status] || "bg-slate-100 text-slate-700 border-slate-200";
+
+        const statusControl = isManager
+          ? `
+            <select
+              onchange="updateReqStatus(${x._idx}, this.value)"
+              aria-label="Requisition Status"
+              class="custom-select text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${badgeColor} focus:outline-none cursor-pointer"
+            >
+              <option value="${esc(x.status)}" selected>${esc(x.status)}</option>
+              ${statuses
+                .filter(st => st !== x.status)
+                .map(st => `<option value="${st}">${st}</option>`)
+                .join("")}
+            </select>
+          `
+          : `
+            <span class="inline-block px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${badgeColor}">
+              ${esc(x.status || "Pending")}
+            </span>
           `;
-        }).join("")
-        : `<tr><td colspan="7" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
-    }
+
+        return `
+          <tr class="hover:bg-slate-50/90 transition-colors">
+            <td class="py-3.5 px-5 font-mono text-xs text-slate-600">${esc(x.date)}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.lab)}</td>
+            <td class="py-3.5 px-4 font-semibold text-slate-900">${esc(x.item)}</td>
+            <td class="py-3.5 px-4 font-mono text-xs text-slate-700">${esc(x.qty || "—")}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-600">${esc(x.type)}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-700">${esc(x.by || "—")}</td>
+            <td class="py-3.5 px-5">${statusControl}</td>
+            <td class="py-3.5 px-4 text-xs text-slate-600">
+              ${esc(x.approval_remarks || "—")}
+            </td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="8" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
+}
+
 
     // ==================== EQUIPMENT & MAINTENANCE (With Inline Condition Update) ====================
     $("addEquipment").onclick = () => {
