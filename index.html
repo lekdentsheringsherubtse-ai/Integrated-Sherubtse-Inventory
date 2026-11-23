@@ -1880,9 +1880,20 @@ async function updateReqStatus(globalIndex, newStatus) {
   }
 
   try {
-    const updateData = {
-      status: newStatus
-    };
+let approvalRemarks = "";
+
+if (newStatus === "Approved" || newStatus === "Rejected") {
+  approvalRemarks = prompt(
+    `Enter remarks for this ${newStatus.toLowerCase()} decision:`
+  );
+
+  if (approvalRemarks === null) return;
+}
+
+const updateData = {
+  status: newStatus,
+  approval_remarks: approvalRemarks
+};
 
     if (newStatus === "Approved" || newStatus === "Rejected") {
       updateData.approved_by = currentUserProfile.id;
@@ -2256,17 +2267,22 @@ async function loadSupabaseData() {
 
     if (requisitionError) throw requisitionError;
 
-    db.requisitions = requisitions.map(x => ({
-      id: x.id,
-      date: x.request_date || "",
-      lab: labNames[x.laboratory_id] || "",
-      item: x.item_name,
-      qty: x.quantity,
-      type: x.request_type || "",
-      by: x.requested_by || "",
-      status: x.status || "Submitted",
-      remarks: x.remarks || ""
-    }));
+db.requisitions = requisitions.map(x => ({
+  id: x.id,
+  date: x.request_date || "",
+  lab: labNames[x.laboratory_id] || "",
+  item: x.item_name,
+  qty: x.quantity,
+  type: x.request_type || "",
+  by: x.requested_by || "",
+  status: x.status || "Pending",
+  remarks: x.remarks || "",
+  approved_by: x.approved_by || "",
+  approved_at: x.approved_at || "",
+  approval_remarks: x.approval_remarks || "",
+  completed_at: x.completed_at || ""
+}));
+
 
     // Load equipment
     const { data: equipment, error: equipmentError } =
