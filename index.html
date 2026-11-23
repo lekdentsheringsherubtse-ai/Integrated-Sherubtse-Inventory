@@ -1788,7 +1788,6 @@ $("saveTransaction").onclick = async () => {
     // ==================== REQUISITIONS (With Inline Status Update) ====================
 
   
-
 $("saveReq").onclick = async () => {
   const item = $("rItem").value.trim();
 
@@ -1933,7 +1932,6 @@ async function updateReqStatus(globalIndex, newStatus) {
 }
 
 
-
 function renderRequisitions() {
   const indexed = db.requisitions
     .map((x, idx) => ({ ...x, _idx: idx }))
@@ -1947,6 +1945,7 @@ function renderRequisitions() {
   ];
 
   const isManager =
+    currentUserProfile &&
     currentUserProfile.role === "assistant_manager";
 
   $("reqRows").innerHTML = indexed.length
@@ -1997,6 +1996,7 @@ function renderRequisitions() {
       }).join("")
     : `<tr><td colspan="8" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
 }
+
 
 
     // ==================== EQUIPMENT & MAINTENANCE (With Inline Condition Update) ====================
