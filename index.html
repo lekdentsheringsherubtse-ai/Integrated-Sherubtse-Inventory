@@ -2077,6 +2077,70 @@ function renderRequisitions() {
     : `<tr><td colspan="9" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
 }
 
+async function viewReqHistory(requisitionId) {
+  const history = (db.requisitionHistory || [])
+    .filter(x => Number(x.requisition_id) === Number(requisitionId))
+    .sort((a, b) => new Date(a.changed_at) - new Date(b.changed_at));
+
+  const content = history.length
+    ? history.map(x => `
+        <div class="border-l-2 border-blue-400 pl-4 pb-4">
+          <p class="font-semibold text-slate-800">
+            ${esc(x.old_status || "Initial")} →
+            ${esc(x.new_status)}
+          </p>
+          <p class="text-xs text-slate-500 mt-1">
+            ${esc(new Date(x.changed_at).toLocaleString())}
+          </p>
+          <p class="text-xs text-slate-600 mt-1">
+            ${esc(x.remarks || "No remarks")}
+          </p>
+        </div>
+      `).join("")
+    : `<p class="text-sm text-slate-500">No status history recorded yet.</p>`;
+
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4";
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+      <div class="flex justify-between items-center mb-5">
+        <h3 class="text-lg font-bold text-slate-900">
+          Requisition Status History
+        </h3>
+        <button id="closeReqHistory"
+          class="text-slate-500 hover:text-slate-800 text-xl">
+          &times;
+        </button>
+      </div>
+
+      <div class="max-h-96 overflow-y-auto">
+        ${content}
+      </div>
+
+      <div class="text-right mt-5">
+        <button id="closeReqHistoryBottom"
+          class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll(
+    "#closeReqHistory, #closeReqHistoryBottom"
+  ).forEach(button => {
+    button.addEventListener("click", () => modal.remove());
+  });
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) modal.remove();
+  });
+}
+
 
 
     // ==================== EQUIPMENT & MAINTENANCE (With Inline Condition Update) ====================
@@ -2394,7 +2458,16 @@ db.requisitions = requisitions.map(x => ({
   approval_remarks: x.approval_remarks || "",
   completed_at: x.completed_at || ""
 }));
+// Load requisition status history
+const { data: history, error: historyError } =
+  await supabaseClient
+    .from("requisition_status_history")
+    .select("*")
+    .order("changed_at", { ascending: true });
 
+if (historyError) throw historyError;
+
+db.requisitionHistory = history || [];
 
     // Load equipment
     const { data: equipment, error: equipmentError } =
