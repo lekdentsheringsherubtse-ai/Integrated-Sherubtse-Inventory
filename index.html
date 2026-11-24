@@ -1967,9 +1967,46 @@ async function updateReqStatus(globalIndex, newStatus) {
 
 
 function renderRequisitions() {
+
+  const labFilter = $("reqLabFilter");
+  const yearFilter = $("reqYearFilter");
+  const statusFilter = $("reqStatusFilter");
+
+  const selectedLab = labFilter?.value || "All";
+  const selectedYear = yearFilter?.value || "All";
+  const selectedStatus = statusFilter?.value || "All";
+
+  // Automatically collect available years
+  const years = [...new Set(
+    db.requisitions
+      .map(x => String(x.date || "").slice(0, 4))
+      .filter(y => /^\d{4}$/.test(y))
+  )].sort((a, b) => b - a);
+
+  // Populate Year dropdown
+  if (yearFilter) {
+    yearFilter.innerHTML =
+      '<option value="All">All Years</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join("");
+
+    yearFilter.value = years.includes(selectedYear)
+      ? selectedYear
+      : "All";
+  }
+
+  // Connect dropdowns to the table
+  if (labFilter) labFilter.onchange = renderRequisitions;
+  if (yearFilter) yearFilter.onchange = renderRequisitions;
+  if (statusFilter) statusFilter.onchange = renderRequisitions;
+
+  // Apply all three filters
   const indexed = db.requisitions
     .map((x, idx) => ({ ...x, _idx: idx }))
-    .filter(x => scope() === "All" || x.lab === scope());
+    .filter(x => scope() === "All" || x.lab === scope())
+    .filter(x => selectedLab === "All" || x.lab === selectedLab)
+    .filter(x => selectedYear === "All" ||
+      String(x.date || "").startsWith(selectedYear))
+    .filter(x => selectedStatus === "All" || x.status === selectedStatus);
 
   const statuses = [
     "Under Review",
