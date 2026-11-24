@@ -2088,6 +2088,9 @@ async function viewReqHistory(requisitionId) {
             ${esc(x.old_status || "Initial")} →
             ${esc(x.new_status)}
           </p>
+          <p class="text-xs text-slate-600 mt-1">
+  Changed by: ${esc(x.changed_by_name || "Unknown User")}
+</p>
           <p class="text-xs text-slate-500 mt-1">
             ${esc(new Date(x.changed_at).toLocaleString())}
           </p>
@@ -2467,6 +2470,19 @@ const { data: history, error: historyError } =
 if (historyError) throw historyError;
 
 db.requisitionHistory = history || [];
+// Load profile names for requisition history
+const { data: profiles, error: profilesError } =
+  await supabaseClient
+    .from("profiles")
+    .select("id, full_name");
+
+if (profilesError) throw profilesError;
+
+db.requisitionHistory = (history || []).map(h => ({
+  ...h,
+  changed_by_name:
+    profiles?.find(p => p.id === h.changed_by)?.full_name || "Unknown User"
+}));
 
     // Load equipment
     const { data: equipment, error: equipmentError } =
