@@ -2061,11 +2061,20 @@ function renderRequisitions() {
             <td class="py-3.5 px-5">${statusControl}</td>
             <td class="py-3.5 px-4 text-xs text-slate-600">
               ${esc(x.approval_remarks || "—")}
+            <th class="py-3.5 px-4">History</th>
             </td>
+            <td class="py-3.5 px-4">
+  <button
+    onclick="viewReqHistory(${x.id})"
+    class="text-blue-600 hover:text-blue-800 text-xs font-semibold"
+  >
+    View History
+  </button>
+</td>
           </tr>
         `;
       }).join("")
-    : `<tr><td colspan="8" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
+    : `<tr><td colspan="9" class="py-12 text-center text-sm text-slate-400">No requisitions recorded yet.</td></tr>`;
 }
 
 
