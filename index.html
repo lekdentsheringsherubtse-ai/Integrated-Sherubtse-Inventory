@@ -899,35 +899,51 @@
               <!-- Requisition Filters -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
 
-  <div>
-    <label class="block text-sm font-medium mb-1">Laboratory</label>
-    <select id="reqLabFilter" class="w-full border rounded-lg p-2">
-      <option value="All">All Laboratories</option>
-      <option value="Chemistry Laboratory">Chemistry Laboratory</option>
-      <option value="Physics Laboratory">Physics Laboratory</option>
-      <option value="Life Science Laboratory">Life Science Laboratory</option>
-      <option value="Central Instrumental Facilities">Central Instrumental Facilities</option>
-    </select>
-  </div>
+ 
+<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+  <label for="reqLabFilter" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+    Laboratory
+  </label>
 
-  <div>
-    <label class="block text-sm font-medium mb-1">Year</label>
-    <select id="reqYearFilter" class="w-full border rounded-lg p-2">
-      <option value="All">All Years</option>
-    </select>
-  </div>
+  <select id="reqLabFilter"
+    class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition">
+    <option value="All">All Laboratories</option>
+    <option value="Chemistry Laboratory">Chemistry Laboratory</option>
+    <option value="Physics Laboratory">Physics Laboratory</option>
+    <option value="Life Science Laboratory">Life Science Laboratory</option>
+    <option value="Central Instrumental Facilities">Central Instrumental Facilities</option>
+  </select>
+</div>
 
-  <div>
-    <label class="block text-sm font-medium mb-1">Status</label>
-    <select id="reqStatusFilter" class="w-full border rounded-lg p-2">
-      <option value="All">All Statuses</option>
-      <option value="Pending">Pending</option>
-      <option value="Under Review">Under Review</option>
-      <option value="Approved">Approved</option>
-      <option value="Rejected">Rejected</option>
-      <option value="Purchased">Purchased</option>
-    </select>
-  </div>
+  
+<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+  <label for="reqYearFilter" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+    Purchase Year
+  </label>
+
+  <select id="reqYearFilter"
+    class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition">
+    <option value="All">All Years</option>
+  </select>
+</div>
+
+
+  
+<div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+  <label for="reqStatusFilter" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+    Requisition Status
+  </label>
+
+  <select id="reqStatusFilter"
+    class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition">
+    <option value="All">All Statuses</option>
+    <option value="Pending">Pending</option>
+    <option value="Under Review">Under Review</option>
+    <option value="Approved">Approved</option>
+    <option value="Rejected">Rejected</option>
+    <option value="Purchased">Purchased</option>
+  </select>
+</div>
 
 </div>
               </table>
